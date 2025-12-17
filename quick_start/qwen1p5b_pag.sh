@@ -1,5 +1,10 @@
 set -x
 
+export WANDB_API_KEY="810f91e58aa0fd1d03b11c60b0d1cffbb1d941f4"
+export WANDB_ENTITY="rl_agent"
+
+WAND_PROJECT='Policy-As-GenVerifier'
+
 math500=datasets/math500.parquet
 math7500=datasets/math7500.parquet
 aime2024=datasets/aime2024.parquet
@@ -11,15 +16,15 @@ PROJECT_NAME='PAG'
 CKPT_PATH=checkpoints
 MODEL_PATH=Qwen/Qwen2.5-1.5B-Instruct
 
-EXPERIMENT_NAME="qwen1p5b_pag"
+EXPERIMENT_NAME="qwen1p5b_pag_4turns"
 n=4
 rollout_type=pag
-num_turns=2
+num_turns=4
 policy_rs=True
 rs_coef=1.0
 norm_type=role
 
-python3 -m verl.trainer.main_ppo \
+CUDA_VISIBLE_DEVICES=0,1,2,3 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=gae \
     data.train_files=[$math7500] \
     data.val_files="['$math500']" \
@@ -55,7 +60,7 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.val_kwargs.top_k=-1 \
     actor_rollout_ref.rollout.val_kwargs.top_p=0.95 \
     actor_rollout_ref.rollout.val_kwargs.temperature=0.6 \
-    actor_rollout_ref.rollout.val_kwargs.num_turns=2 \
+    actor_rollout_ref.rollout.val_kwargs.num_turns=$num_turns \
     reward_model.policy_rs=$policy_rs \
     reward_model.rs_coef=$rs_coef \
     critic.optim.lr=2e-6 \
@@ -69,9 +74,9 @@ python3 -m verl.trainer.main_ppo \
     trainer.logger=['console','wandb'] \
     trainer.project_name=$PROJECT_NAME \
     trainer.experiment_name=$EXPERIMENT_NAME \
-    trainer.n_gpus_per_node=8 \
+    trainer.n_gpus_per_node=4 \
     trainer.nnodes=1 \
-    trainer.save_freq=10 \
+    trainer.save_freq=-1 \
     trainer.test_freq=10 \
     trainer.total_epochs=40 \
     trainer.default_local_dir=$CKPT_PATH/$PROJECT_NAME/$EXPERIMENT_NAME \
