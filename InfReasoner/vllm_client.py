@@ -10,7 +10,7 @@ from datasets import load_dataset
 
 # Server configuration (matches vllm_serve.sh defaults)
 HOST = "localhost"  # Change to server IP if running remotely
-PORT = 9000         # Default port from vllm_serve.sh
+PORT = 9001         # Default port from vllm_serve.sh
 MODEL = "Qwen/Qwen2.5-14B-Instruct"  # Default model from vllm_serve.sh
 
 # Initialize OpenAI client pointing to vLLM server

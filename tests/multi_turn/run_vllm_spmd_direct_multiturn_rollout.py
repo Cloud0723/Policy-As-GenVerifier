@@ -210,7 +210,7 @@ def main():
     local_rank, rank, world_size = initialize_global_process_group()
     
     # Configuration parameters
-    model_path = os.environ.get('MODEL_PATH', None) # define your model path here.
+    model_path = os.environ.get('MODEL_PATH', "Qwen/Qwen2.5-7B-Instruct") # define your model path here.
     max_prompt_length = 200
     response_length = 200
     tensor_model_parallel_size = 1
