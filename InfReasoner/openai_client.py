@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Unified vLLM Client for Mathematical Reasoning.
+OpenAI Client for Mathematical Reasoning.
 
-Connects to a vLLM server and performs mathematical reasoning using:
+Connects to OpenAI's API and performs mathematical reasoning using:
 - Single-turn: Direct answer generation with parallel sampling
 - Multi-turn: Iterative refinement with multiple reasoning turns
 
@@ -17,7 +17,6 @@ from typing import Dict, List, Union
 
 from openai import OpenAI
 from datasets import load_dataset
-from transformers import AutoTokenizer
 from tqdm import tqdm
 
 from prompt import (
@@ -28,81 +27,72 @@ from prompt import (
 )
 
 
-class VLLMReasoningClient:
+class OpenAIReasoningClient:
     """
-    Unified client for single-turn and multi-turn mathematical reasoning using vLLM.
+    Unified client for single-turn and multi-turn mathematical reasoning using OpenAI.
 
     This class provides methods for:
-    - Connecting to a vLLM server
+    - Connecting to OpenAI's API
     - Generating text completions
     - Single-turn reasoning with parallel sampling
     - Multi-turn reasoning with iterative refinement
     - Evaluating performance on datasets
     """
 
-    def __init__(self, host: str = "localhost", port: int = 9000, model: str = "Qwen/Qwen2.5-72B-Instruct"):
+    def __init__(self, api_key: str = None, model: str = "gpt-4o"):
         """
-        Initialize the vLLM reasoning client.
+        Initialize the OpenAI reasoning client.
 
         Args:
-            host: vLLM server host
-            port: vLLM server port
-            model: Model name/path
+            api_key: OpenAI API key (defaults to OPENAI_API_KEY environment variable)
+            model: Model name (e.g., "gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo")
         """
-        self.host = host
-        self.port = port
         self.model = model
 
-        # Initialize OpenAI client pointing to vLLM server
+        # Initialize OpenAI client
         self.client = OpenAI(
-            base_url=f"http://{host}:{port}/v1",
-            api_key="EMPTY"  # vLLM doesn't require an API key
+            api_key=api_key or os.environ.get("OPENAI_API_KEY")
         )
-
-        # Initialize tokenizer for token counting
-        self.tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
 
     # ============================================================================
     # Text Generation Methods
     # ============================================================================
 
     def generate_text(self, prompt: str, max_tokens: int = 512, temperature: float = 0.6,
-                     top_p: float = 0.95, top_k: int = 20, n: int = 1) -> Union[str, List[str]]:
+                     top_p: float = 0.95, n: int = 1) -> Union[str, List[str]]:
         """
-        Generate text using the vLLM server.
+        Generate text using OpenAI's API.
 
         Args:
             prompt: The input prompt for text generation
             max_tokens: Maximum number of tokens to generate
-            temperature: Sampling temperature (0.0 to 1.0)
+            temperature: Sampling temperature (0.0 to 2.0)
             top_p: Top-p (nucleus) sampling parameter
-            top_k: Top-k sampling parameter
             n: Number of completions to generate
 
         Returns:
             Generated text string if n=1, otherwise list of strings
         """
-        response = self.client.completions.create(
+        response = self.client.chat.completions.create(
             model=self.model,
-            prompt=prompt,
+            messages=[{"role": "user", "content": prompt}],
             max_tokens=max_tokens,
             temperature=temperature,
             top_p=top_p,
-            n=n,
-            extra_body={"top_k": top_k}
+            n=n
         )
 
         if n == 1:
-            return response.choices[0].text
+            return response.choices[0].message.content
         else:
-            return [choice.text for choice in response.choices]
+            return [choice.message.content for choice in response.choices]
 
     # ============================================================================
     # Reasoning Methods
     # ============================================================================
 
     def single_turn_reasoning(self, question: str, max_tokens: int = 8192, temperature: float = 0.6,
-                            top_p: float = 0.95, top_k: int = 20, n: int = 1) -> List[Dict]:
+                            top_p: float = 0.95, n: int = 1) -> List[Dict]:
         """
         Perform single-turn reasoning on a mathematical question.
 
@@ -114,7 +104,6 @@ class VLLMReasoningClient:
             max_tokens: Maximum tokens to generate
             temperature: Sampling temperature
             top_p: Top-p (nucleus) sampling parameter
-            top_k: Top-k sampling parameter
             n: Number of samples to generate
 
         Returns:
@@ -124,30 +113,32 @@ class VLLMReasoningClient:
         prompt = SINGLE_TURN_SYSTEM_PROMPT.format(question=question)
 
         # Generate n responses in parallel
-        responses = self.generate_text(prompt, max_tokens=max_tokens, temperature=temperature,
-                                      top_p=top_p, top_k=top_k, n=n)
-
-        # Ensure responses is a list
-        if not isinstance(responses, list):
-            responses = [responses]
-
-        # Count prompt tokens once (shared across all samples)
-        prompt_tokens = len(self.tokenizer.encode(prompt))
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p,
+            n=n
+        )
 
         # Process each response
         results = []
-        for response in responses:
-            # Count response tokens
-            response_tokens = len(self.tokenizer.encode(response))
-            total_tokens = prompt_tokens + response_tokens
+        for choice in response.choices:
+            response_text = choice.message.content
+
+            # Get token counts from response
+            prompt_tokens = response.usage.prompt_tokens if response.usage else 0
+            response_tokens = len(response_text.split())  # Rough estimate per response
+            total_tokens = response.usage.total_tokens if response.usage else 0
 
             # Extract answer from \boxed{}
-            answer = self._extract_boxed_answer(response)
+            answer = self._extract_boxed_answer(response_text)
 
             results.append({
                 'answer': answer,
                 'prompt': prompt,
-                'response': response,
+                'response': response_text,
                 'prompt_tokens': prompt_tokens,
                 'response_tokens': response_tokens,
                 'total_tokens': total_tokens,
@@ -157,7 +148,7 @@ class VLLMReasoningClient:
         return results
 
     def multi_turn_reasoning(self, question: str, max_turns: int = 5, max_tokens: int = 2048,
-                           temperature: float = 0.6, top_p: float = 0.95, top_k: int = 20, n: int = 1) -> List[Dict]:
+                           temperature: float = 0.6, top_p: float = 0.95, n: int = 1) -> List[Dict]:
         """
         Perform multi-turn reasoning on a mathematical question.
 
@@ -171,7 +162,6 @@ class VLLMReasoningClient:
             max_tokens: Maximum tokens per turn
             temperature: Sampling temperature
             top_p: Top-p (nucleus) sampling parameter
-            top_k: Top-k sampling parameter
             n: Number of independent reasoning chains to generate
 
         Returns:
@@ -190,13 +180,21 @@ class VLLMReasoningClient:
                 prompt = self._get_turn_prompt(turn, max_turns, question, summary)
 
                 # Generate response
-                response = self.generate_text(prompt, max_tokens=max_tokens, temperature=temperature,
-                                            top_p=top_p, top_k=top_k, n=1)
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    top_p=top_p,
+                    n=1
+                )
 
-                # Count tokens
-                prompt_tokens = len(self.tokenizer.encode(prompt))
-                response_tokens = len(self.tokenizer.encode(response))
-                turn_total_tokens = prompt_tokens + response_tokens
+                response_text = response.choices[0].message.content
+
+                # Get token counts
+                prompt_tokens = response.usage.prompt_tokens if response.usage else 0
+                response_tokens = response.usage.completion_tokens if response.usage else 0
+                turn_total_tokens = response.usage.total_tokens if response.usage else 0
                 total_tokens += turn_total_tokens
 
                 # Store turn history
@@ -204,20 +202,20 @@ class VLLMReasoningClient:
                     'turn': turn,
                     'prompt_type': 'first' if turn == 1 else ('final' if turn == max_turns else 'intermediate'),
                     'prompt': prompt,
-                    'response': response,
+                    'response': response_text,
                     'prompt_tokens': prompt_tokens,
                     'response_tokens': response_tokens,
                     'total_tokens': turn_total_tokens
                 })
 
                 # Check if answer is provided
-                answer = self._extract_xml_answer(response)
+                answer = self._extract_xml_answer(response_text)
                 if answer is not None:
                     all_results.append(self._create_result_dict(answer, question, history, total_tokens, turn, completed=True))
                     break
 
                 # Extract summary for next turn
-                summary = self._extract_summary(response)
+                summary = self._extract_summary(response_text)
             else:
                 # Max turns reached without answer (for-else executes if loop completes without break)
                 all_results.append(self._create_result_dict(None, question, history, total_tokens, max_turns, completed=False))
@@ -229,7 +227,7 @@ class VLLMReasoningClient:
     # ============================================================================
 
     def evaluate(self, dataset, mode: str = "multi-turn", num_questions: int = 30,
-                temperature: float = 0.6, top_p: float = 0.95, top_k: int = 20,
+                temperature: float = 0.6, top_p: float = 0.95,
                 # Sampling parameters
                 num_samples: int = 64,
                 # Single-turn parameters
@@ -247,7 +245,6 @@ class VLLMReasoningClient:
             num_questions: Number of questions to process from end of dataset
             temperature: Sampling temperature
             top_p: Top-p parameter
-            top_k: Top-k parameter
             num_samples: Number of samples per question (used in both modes)
             max_tokens_single: Maximum tokens to generate (single-turn)
             max_turns: Maximum number of reasoning turns (multi-turn)
@@ -281,12 +278,12 @@ class VLLMReasoningClient:
             if mode == "single-turn":
                 question_result, correct_count, is_completed = self._evaluate_single_turn_question(
                     math_question, ground_truth, question_idx, num_samples,
-                    max_tokens_single, temperature, top_p, top_k
+                    max_tokens_single, temperature, top_p
                 )
             else:  # multi-turn
                 question_result, correct_count, is_completed = self._evaluate_multi_turn_question(
                     math_question, ground_truth, question_idx, num_samples,
-                    max_turns, max_tokens_multi, temperature, top_p, top_k
+                    max_turns, max_tokens_multi, temperature, top_p
                 )
 
             # Update totals (unified for both modes)
@@ -431,7 +428,7 @@ class VLLMReasoningClient:
 
     def _evaluate_single_turn_question(self, question: str, ground_truth: str, question_idx: int,
                                       num_samples: int, max_tokens: int, temperature: float,
-                                      top_p: float, top_k: int) -> tuple:
+                                      top_p: float) -> tuple:
         """Evaluate a single question using single-turn reasoning.
 
         Returns:
@@ -442,7 +439,7 @@ class VLLMReasoningClient:
         """
         results = self.single_turn_reasoning(
             question, max_tokens=max_tokens, temperature=temperature,
-            top_p=top_p, top_k=top_k, n=num_samples
+            top_p=top_p, n=num_samples
         )
 
         # Process results
@@ -488,7 +485,7 @@ class VLLMReasoningClient:
 
     def _evaluate_multi_turn_question(self, question: str, ground_truth: str, question_idx: int,
                                      num_samples: int, max_turns: int, max_tokens: int,
-                                     temperature: float, top_p: float, top_k: int) -> tuple:
+                                     temperature: float, top_p: float) -> tuple:
         """Evaluate a single question using multi-turn reasoning.
 
         Returns:
@@ -499,7 +496,7 @@ class VLLMReasoningClient:
         """
         results = self.multi_turn_reasoning(
             question, max_turns=max_turns, max_tokens=max_tokens,
-            temperature=temperature, top_p=top_p, top_k=top_k, n=num_samples
+            temperature=temperature, top_p=top_p, n=num_samples
         )
 
         # Process results
@@ -783,26 +780,24 @@ def load_aime_2025_data(dataset_name: str = "AI-MO/aimo-validation-aime", split:
 # ============================================================================
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Unified vLLM Reasoning Client")
+    parser = argparse.ArgumentParser(description="OpenAI Reasoning Client")
     parser.add_argument("--mode", type=str, default="multi-turn", choices=["single-turn", "multi-turn"],
                        help="Reasoning mode: single-turn or multi-turn")
-    parser.add_argument("--host", type=str, default="localhost", help="vLLM server host")
-    parser.add_argument("--port", type=int, default=9000, help="vLLM server port")
-    parser.add_argument("--model", type=str, default="Qwen/Qwen3-235B-A22B-Thinking-2507", help="Model name")
+    parser.add_argument("--api-key", type=str, default=None, help="OpenAI API key (defaults to OPENAI_API_KEY env var)")
+    parser.add_argument("--model", type=str, default="gpt-4o", help="OpenAI model name (e.g., gpt-4o, gpt-4o-mini, gpt-3.5-turbo)")
     parser.add_argument("--num-questions", type=int, default=30, help="Number of questions to process")
 
     # Sampling parameter
     parser.add_argument("--num-samples", type=int, default=64, help="Number of samples per question")
     parser.add_argument("--temperature", type=float, default=0.6, help="Sampling temperature")
     parser.add_argument("--top-p", type=float, default=0.95, help="Top-p parameter")
-    parser.add_argument("--top-k", type=int, default=20, help="Top-k parameter")
 
     # Single-turn specific arguments
     parser.add_argument("--max-tokens-single", type=int, default=16384, help="Max tokens (single-turn)")
 
     # Multi-turn specific arguments
     parser.add_argument("--max-turns", type=int, default=5, help="Max reasoning turns (multi-turn)")
-    parser.add_argument("--max-tokens-multi", type=int, default=8192, help="Max tokens per turn (multi-turn)")
+    parser.add_argument("--max-tokens-multi", type=int, default=16384, help="Max tokens per turn (multi-turn)")
 
     # Output arguments
     parser.add_argument("--save-trajectories", action="store_true", default=True, help="Save trajectories to JSON file")
@@ -824,7 +819,7 @@ if __name__ == "__main__":
     print(f"\nDataset fields: {list(first_item.keys())}")
 
     # Initialize client
-    client = VLLMReasoningClient(host=args.host, port=args.port, model=args.model)
+    client = OpenAIReasoningClient(api_key=args.api_key, model=args.model)
 
     # Create output directory with model name and timestamp as suffix
     model_name_clean = args.model.lower().replace("/", "_").replace("\\", "_")
@@ -840,7 +835,6 @@ if __name__ == "__main__":
         num_questions=args.num_questions,
         temperature=args.temperature,
         top_p=args.top_p,
-        top_k=args.top_k,
         num_samples=args.num_samples,
         max_tokens_single=args.max_tokens_single,
         max_turns=args.max_turns,
