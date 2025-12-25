@@ -1,0 +1,14 @@
+{
+  "mode": "multi-turn",
+  "questions_processed": 30,
+  "total_samples": 30,
+  "total_correct": 9,
+  "accuracy": 30.0,
+  "total_completed": 30,
+  "completion_rate": 100.0,
+  "avg_turns": 1.8333333333333333,
+  "total_tokens": 719430,
+  "avg_tokens_per_question": 23981.0,
+  "avg_response_tokens": 12823.666666666666,
+  "num_questions_saved": 30
+}

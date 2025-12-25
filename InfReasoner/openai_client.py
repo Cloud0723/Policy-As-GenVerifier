@@ -759,15 +759,15 @@ class OpenAIReasoningClient:
 # ============================================================================
 # Utility Functions
 # ============================================================================
-
-def load_aime_2025_data(dataset_name: str = "AI-MO/aimo-validation-aime", split: str = "train"):
+ 
+def load_aime24_data(dataset_name: str = "math-ai/aime24", split: str = "test"):
     """
-    Load AIME 2025 dataset from Hugging Face.
-
+    Load AIME24 dataset from Hugging Face.
+ 
     Args:
         dataset_name: Hugging Face dataset name
         split: Dataset split to load
-
+ 
     Returns:
         Dataset object from Hugging Face
     """
@@ -781,14 +781,14 @@ def load_aime_2025_data(dataset_name: str = "AI-MO/aimo-validation-aime", split:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="OpenAI Reasoning Client")
-    parser.add_argument("--mode", type=str, default="multi-turn", choices=["single-turn", "multi-turn"],
+    parser.add_argument("--mode", type=str, default="single-turn", choices=["single-turn", "multi-turn"],
                        help="Reasoning mode: single-turn or multi-turn")
     parser.add_argument("--api-key", type=str, default=None, help="OpenAI API key (defaults to OPENAI_API_KEY env var)")
     parser.add_argument("--model", type=str, default="gpt-4o", help="OpenAI model name (e.g., gpt-4o, gpt-4o-mini, gpt-3.5-turbo)")
     parser.add_argument("--num-questions", type=int, default=30, help="Number of questions to process")
 
     # Sampling parameter
-    parser.add_argument("--num-samples", type=int, default=64, help="Number of samples per question")
+    parser.add_argument("--num-samples", type=int, default=8, help="Number of samples per question")
     parser.add_argument("--temperature", type=float, default=0.6, help="Sampling temperature")
     parser.add_argument("--top-p", type=float, default=0.95, help="Top-p parameter")
 
@@ -805,12 +805,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # Load AIME 2025 dataset from Hugging Face
+    # Load AIME24 dataset from Hugging Face
     print("=" * 80)
-    print("Loading AIME 2025 Dataset from Hugging Face")
+    print("Loading AIME24 Dataset from Hugging Face")
     print("=" * 80)
 
-    dataset = load_aime_2025_data()
+    dataset = load_aime24_data()
     print(f"Dataset loaded successfully!")
     print(f"Number of questions: {len(dataset)}")
 

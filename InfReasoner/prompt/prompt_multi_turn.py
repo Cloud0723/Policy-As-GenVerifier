@@ -1,5 +1,3 @@
-# prompts.py
-
 FIRST_TURN_SYSTEM_PROMPT = """You are a mathematics expert. Please provide comprehensive, detailed step-by-step reasoning to solve the given question.
 This is the first turn (turn {turn_number}).
 
@@ -134,9 +132,4 @@ Example:
 
 Question: {question}
 Summary from the last turn: {summary}
-"""
-
-
-SINGLE_TURN_SYSTEM_PROMPT = """You are a mathematics expert. Please reason step by step, and put your final answer within \\boxed{}.
-Question: {question}
 """

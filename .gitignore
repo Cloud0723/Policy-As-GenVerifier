@@ -12,6 +12,7 @@ debug_*
 **/*.tar.gz
 **/playground
 **/wandb
+**/datasets
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -133,4 +134,3 @@ outputs
 !data_debug/
 !data_debug/**/*
 !data_debug/**/*.pt
-!datasets/**/*

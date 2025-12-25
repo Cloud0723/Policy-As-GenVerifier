@@ -1,0 +1,37 @@
+
+  {
+    "id":71,
+    "problem":"Consider the paths of length $16$ that follow the lines from the lower left corner to the upper right corner on an $8\\times 8$ grid. Find the number of such paths that change direction exactly four times, as in the examples shown below.",
+    "solution":"\\boxed{294}",
+    "url":"https:\/\/artofproblemsolving.com\/wiki\/index.php\/2024_AIME_I_Problems\/Problem_6",
+    "accuracy":0.125,
+    "accuracy_percent":12.5
+  }
+
+  {
+    "id":72,
+    "problem":"Find the largest possible real part of \\[(75+117i)z+\\frac{96+144i}{z}\\]where $z$ is a complex number with $|z|=4$.",
+    "solution":"\\boxed{540}",
+    "url":"https:\/\/artofproblemsolving.com\/wiki\/index.php\/2024_AIME_I_Problems\/Problem_7",
+    "accuracy":0.375,
+    "accuracy_percent":37.5
+  }
+
+  {
+    "id":86,
+    "problem":"Alice chooses a set $A$ of positive integers. Then Bob lists all finite nonempty sets $B$ of positive integers with the property that the maximum element of $B$ belongs to $A$. Bob's list has 2024 sets. Find the sum of the elements of A.",
+    "solution":"\\boxed{55}",
+    "url":"https:\/\/artofproblemsolving.com\/wiki\/index.php\/2024_AIME_II_Problems\/Problem_6",
+    "accuracy":0.125,
+    "accuracy_percent":12.5
+  }
+
+  {
+    "id":68,
+    "problem":"Alice and Bob play the following game. A stack of $n$ tokens lies before them. The players take turns with Alice going first. On each turn, the player removes either $1$ token or $4$ tokens from the stack. Whoever removes the last token wins. Find the number of positive integers $n$ less than or equal to $2024$ for which there exists a strategy for Bob that guarantees that Bob will win the game regardless of Alice's play.",
+    "solution":"\\boxed{809}",
+    "url":"https:\/\/artofproblemsolving.com\/wiki\/index.php\/2024_AIME_I_Problems\/Problem_3",
+    "accuracy":0.125,
+    "accuracy_percent":12.5
+  }
+

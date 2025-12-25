@@ -7,10 +7,10 @@ set -e
 # Model and server configuration
 HOST="localhost"
 PORT=9001
-MODEL_PATH="Qwen/Qwen2.5-7B-Instruct"
+MODEL_PATH="Qwen/Qwen2.5-Math-7B"
 
 # Generation parameters (from CURE eval.sh)
-context_length=4096
+context_length=16384
 max_prompt_length=512
 n_samples=8  # Number of samples per problem (for Avg@32)
 top_p=0.95

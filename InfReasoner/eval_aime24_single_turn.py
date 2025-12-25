@@ -281,13 +281,13 @@ def main():
                         help='vLLM server host')
     parser.add_argument('--port', type=int, default=9001,
                         help='vLLM server port')
-    parser.add_argument('--model', type=str, default='Qwen/Qwen2.5-14B-Instruct',
+    parser.add_argument('--model', type=str, default='Qwen/Qwen2.5-Math-1.5B',
                         help='Model name')
     
     # Generation parameters (from CURE eval.sh)
-    parser.add_argument('--n-samples', type=int, default=32,
+    parser.add_argument('--n-samples', type=int, default=8,
                         help='Number of samples per problem (default: 32)')
-    parser.add_argument('--max-tokens', type=int, default=3584,
+    parser.add_argument('--max-tokens', type=int, default=4096,
                         help='Max response tokens (default: 4096-512)')
     parser.add_argument('--temperature', type=float, default=0.6,
                         help='Sampling temperature (default: 0.6)')

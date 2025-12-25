@@ -6,7 +6,8 @@ export CUDA_VISIBLE_DEVICES=$CUDA_DEVICES
 TENSOR_PARALLEL_SIZE=$(echo $CUDA_VISIBLE_DEVICES | tr ',' '\n' | wc -l)
 HOST=${2:-"0.0.0.0"}
 PORT=${3:-9000}
-MODEL=${4:-"Qwen/Qwen3-235B-A22B-Thinking-2507"}
+# MODEL=${4:-"Qwen/Qwen2.5-72B-Instruct"}
+MODEL=${4:-"/mnt/data1/li003968/infinite_thinking/global_step_600_hf"}
 MAX_MODEL_LEN=${5:-32768}
 
 
@@ -25,11 +26,23 @@ Starting VLLM server:
 
 EOF
 
-# Start VLLM server
-vllm serve $MODEL \
+# Build vLLM command with conditional parameters
+VLLM_CMD="vllm serve $MODEL \
     --tensor-parallel-size $TENSOR_PARALLEL_SIZE \
     --host $HOST \
     --port $PORT \
     --gpu-memory-utilization 0.9 \
-    --max-model-len $MAX_MODEL_LEN \
-    --disable-log-stats
+    --max-model-len $MAX_MODEL_LEN"
+
+# Add hf-overrides if max_model_len > 32k
+if [ $MAX_MODEL_LEN -gt 32768 ]; then
+    VLLM_CMD="$VLLM_CMD \
+    --hf-overrides '{\"max_position_embeddings\": $MAX_MODEL_LEN}'"
+    echo "Max model length > 32k, adding --hf-overrides with max_position_embeddings=$MAX_MODEL_LEN"
+fi
+
+VLLM_CMD="$VLLM_CMD \
+    --disable-log-stats"
+
+# Start VLLM server
+eval $VLLM_CMD
