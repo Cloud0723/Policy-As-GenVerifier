@@ -11,6 +11,7 @@ export WANDB_PROJECT="${WANDB_PROJECT:-Infinite-Think}"
 # - accelerate 的并行/分布式由 `--config_file` 决定
 
 # 无论从哪里执行，都先切到本脚本所在目录（保证相对路径可用）
+export WANDB_API_KEY="810f91e58aa0fd1d03b11c60b0d1cffbb1d941f4"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd "${SCRIPT_DIR}"
 
@@ -24,81 +25,56 @@ export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:T
 # 默认：使用 4 processes 的配置（对应 4 卡）。如果你要 8 卡，可改成 `trl/accelerate_configs/multi_gpu.yaml`
 ACCELERATE_CONFIG="${ACCELERATE_CONFIG:-examples/accelerate_configs/multi_gpu.yaml}"
 
+# accelerate launch \
+#   --main_process_port 29502 \
+#   --config_file "${ACCELERATE_CONFIG}" \
+#   examples/scripts/gkd_openr1_math220k.py \
+#   --dtype bfloat16 \
+#   --attn_implementation sdpa \
+#   --model_name_or_path Qwen/Qwen3-4B \
+#   --teacher_model_name_or_path Qwen/Qwen3-32B \
+#   --dataset_name open-r1/OpenR1-Math-220k \
+#   --dataset_train_split train \
+#   --problem_column problem \
+#   --prompt_template "Solve the following math problem. Give your final answer at the end.\n\n{problem}" \
+#   --lmbda 1.0 \
+#   --beta 0.0 \
+#   --max_new_tokens 4096 \
+#   --learning_rate 2e-7 \
+#   --per_device_train_batch_size 1 \
+#   --gradient_accumulation_steps 8 \
+#   --logging_steps 10 \
+#   --save_steps 200 \
+#   --output_dir /mnt/data1/li003968/onpolicy_checkpoint/gkd-openr1-math220k \
+#   --num_train_epochs 1 \
+#   --report_to wandb \
+#   --gradient_checkpointing
+
+# 下面保留原来的参考命令（按需取消注释/修改）：
+#
+
 accelerate launch \
   --main_process_port 29502 \
   --config_file "${ACCELERATE_CONFIG}" \
-  trl/experimental/gold/gold.py \
+  trl/experimental/gkd/gkd_openr1_math220k.py \
   --dtype bfloat16 \
   --attn_implementation sdpa \
   --model_name_or_path Qwen/Qwen3-4B \
   --teacher_model_name_or_path Qwen/Qwen3-32B \
-  --dataset_name open-thoughts/OpenThoughts3-1.2M \
+  --dataset_name open-r1/OpenR1-Math-220k \
+  --dataset_train_split train \
+  --problem_column problem \
+  --prompt_template "Solve the following math problem. Give your final answer at the end.\n\n{problem}" \
+  --lmbda 1.0 \
+  --beta 0.0 \
+  --eval_strategy no \
+  --save_strategy steps \
+  --save_steps 200 \
   --learning_rate 2e-7 \
   --per_device_train_batch_size 1 \
   --gradient_accumulation_steps 8 \
-  --output_dir gold-model \
+  --output_dir /mnt/data1/li003968/onpolicy_checkpoint/gkd-openr1-math220k \
   --num_train_epochs 1 \
   --report_to wandb \
+  --max_new_tokens 4096 \
   --gradient_checkpointing
-
-# 下面保留原来的参考命令（按需取消注释/修改）：
-#
-# accelerate launch \
-#   --config_file examples/accelerate_configs/multi_gpu.yaml \
-#   trl/experimental/gold/gold.py \
-#   --model_name_or_path Qwen/Qwen3-4B \
-#   --teacher_model_name_or_path Qwen/Qwen3-4B-Instruct-2507 \
-#   --dtype auto \
-#   --attn_implementation sdpa \
-#   --dataset_name allenai/tulu-3-sft-mixture \
-#   --dataset_train_split train \
-#   --dataset_test_split train \
-#   --learning_rate 1e-7 \
-#   --gradient_checkpointing \
-#   --per_device_train_batch_size 1 \
-#   --gradient_accumulation_steps 64 \
-#   --num_train_epochs 1 \
-#   --eval_strategy steps \
-#   --eval_steps 100 \
-#   --temperature 1.0 \
-#   --top_p 0.95 \
-#   --top_k 0 \
-#   --lmbda 0.25 \
-#   --beta 0.0 \
-#   --use_uld_loss \
-#   --use_extended_uld \
-#   --uld_use_hybrid_loss \
-#   --uld_crossentropy_weight 0.0 \
-#   --uld_distillation_weight 1.0 \
-#   --uld_student_temperature 1.0 \
-#   --uld_teacher_temperature 1.0 \
-#   --uld_hybrid_unmatched_weight 1.0 \
-#   --uld_hybrid_matched_weight 1.0 \
-#   --logging_steps 1 \
-#   --report_to trackio \
-#   --seed 42 \
-#   --warmup_ratio 0.05 \
-#   --lr_scheduler_type cosine_with_min_lr
-#
-# accelerate launch \
-#   --config_file examples/accelerate_configs/multi_gpu.yaml \
-#   quick_GKD.py \
-#   --model_name_or_path meta-llama/Llama-3.2-1B-Instruct \
-#   --teacher_model_name_or_path Qwen/Qwen2.5-0.5B-Instruct \
-#   --dtype auto \
-#   --attn_implementation sdpa \
-#   --dataset_name HuggingFaceTB/Countdown-Task-GOLD \
-#   --dataset_config_name verified_Qwen2.5-0.5B-Instruct \
-#   --dataset_train_split train \
-#   --per_device_train_batch_size 1 \
-#   --gradient_checkpointing \
-#   --num_train_epochs 1 \
-#   --use_uld_loss \
-#   --uld_use_hybrid_loss \
-#   --logging_steps 10 \
-#   --save_steps 200 \
-#   --output_dir gold-model \
-#   --report_to none \
-#   --seed 42
-
-
