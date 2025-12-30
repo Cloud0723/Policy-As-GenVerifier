@@ -76,5 +76,5 @@ accelerate launch \
   --output_dir /mnt/data1/li003968/onpolicy_checkpoint/gkd-openr1-math220k \
   --num_train_epochs 1 \
   --report_to wandb \
-  --max_new_tokens 4096 \
+  --max_new_tokens 2048 \
   --gradient_checkpointing
